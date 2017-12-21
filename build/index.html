@@ -10,13 +10,9 @@
         
         <title>gba.ninja</title>
 
-        <!-- Global site tag (gtag.js) - Google Analytics -->
-        <script async src="https://www.googletagmanager.com/gtag/js?id=UA-45495852-6"></script>
+        <!-- Global site tag (gtag.js) - Google Analytics shim -->
         <script>
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag("js", new Date());
-            gtag("config", "UA-45495852-6");
+          function gtag() {}
         </script>
 
         <script>
@@ -321,25 +317,22 @@
             }
             
             var romBuffer8 = null;
-            window.loadRomFromFile = function (e) {
+            window.loadRomFromFile = function(romFile) {
                 var errorOpts = {title: "Error"};
 
-                var binaryFile = e.currentTarget.files[0];
-                if (!binaryFile) {
+              console.log("file", romFile);
+                if (!romFile) {
                     return;
                 }
 
-                // Clear the file select input
-                e.currentTarget.form.reset();
-
                 var fr = new FileReader();
-                fr.readAsArrayBuffer(binaryFile);
+                fr.readAsArrayBuffer(romFile);
                 fr.onload = function () {
                     var _romBuffer8 = new Uint8Array(fr.result);
 
                     if (_romBuffer8.length < 512) {
                         gtag("event", "load_tiny_rom_1", {
-                            event_label: binaryFile.name,
+                            event_label: romFile.name,
                         });
                         return modal("That file isn't a GBA ROM. (It's too small to be a ROM.)", errorOpts);
                     }
@@ -355,40 +348,40 @@
                         return v.toString(16);
                     }).join();
                     
-                    if (binaryFile.name.search(/\.zip$/i) !== -1) {
+                    if (romFile.name.search(/\.zip$/i) !== -1) {
                         gtag("event", "load_zip_rom_1", {
-                            event_label: binaryFile.name,
+                            event_label: romFile.name,
                         });
                         return modal("You need to extract the rom file from the zip.", errorOpts);
                     }
                     
                     if (String.fromCharCode(_romBuffer8[0], _romBuffer8[1]) === "PK") {
                         gtag("event", "load_zip_rom_1", {
-                            event_label: binaryFile.name + " (non-dot-zip-file)",
+                            event_label: romFile.name + " (non-dot-zip-file)",
                         });
                         return modal("You need to extract the rom file.", errorOpts);
                     }
 
-                    if (binaryFile.name.search(/\.sav$/i) !== -1) {
+                    if (romFile.name.search(/\.sav$/i) !== -1) {
                         gtag("event", "load_sav_rom_1", {
-                            event_label: binaryFile.name,
+                            event_label: romFile.name,
                         });
                         return modal("That's not a ROM, it's a savegame file. GBA ROM files usually end in '.gba'.", errorOpts);
                     }
                     
-                    if (binaryFile.name.search(/\.smc$/i) !== -1 || binaryFile.name.search(/\.sfc$/i) !== -1) {
+                    if (romFile.name.search(/\.smc$/i) !== -1 || romFile.name.search(/\.sfc$/i) !== -1) {
                         gtag("event", "load_smc_rom_1", {
-                            event_label: binaryFile.name,
+                            event_label: romFile.name,
                         });
                         return modal("That's a SNES ROM, this emulator runs Gameboy Advance ROMs.", errorOpts);
                     }
                     
                     if (gbMagic === "ce,ed,66,66,cc,d,0,b") {
                         gtag("event", "load_gb_rom_1", {
-                            event_label: binaryFile.name,
+                            event_label: romFile.name,
                         });
                         var colorMaybe = "";
-                        if (binaryFile.name.search(/\.gbc$/i) !== -1) {
+                        if (romFile.name.search(/\.gbc$/i) !== -1) {
                             colorMaybe = "Color ";
                         }
                         return modal("That's a Gameboy " + colorMaybe + "ROM, this emulator only runs Gameboy Advance ROMs.", errorOpts);
@@ -397,7 +390,7 @@
                     if (!isPowerOf2(_romBuffer8.length)) {
                         // Some roms are actually non-pot, so don't enforce this.
                         gtag("event", "non_pot_rom_1", {
-                            event_label: stringToCharCodes(romCode) + " " + binaryFile.name + " " + _romBuffer8.length,
+                            event_label: stringToCharCodes(romCode) + " " + romFile.name + " " + _romBuffer8.length,
                         });
                         // Don't return
                     }
@@ -448,18 +441,19 @@
                     }
 
                     
-                    if (romCode.search(/^[A-Z0-9]{4}$/)) {
-                        gtag("event", "invalid_rom_code_1", {
-                            event_label: stringToCharCodes(romCode) + " " + binaryFile.name,
-                        });
-                        return modal("That file doesn't look like a GBA ROM. (Couldn't find a rom code in the file.)", {
-                            title: "Error",
-                            rightButtonText: "Run it anyway",
-                            rightButtonFn: waitForEmuLoad,
-                        });
-                    } else {
-                        waitForEmuLoad();
-                    }
+//                  if (romCode.search(/^[A-Z0-9]{4}$/)) {
+//                      gtag("event", "invalid_rom_code_1", {
+//                          event_label: stringToCharCodes(romCode) + " " + romFile.name,
+//                      });
+//                      return modal("That file doesn't look like a GBA ROM. (Couldn't find a rom code in the file.)", {
+//                          title: "Error",
+//                          rightButtonText: "Run it anyway",
+//                          rightButtonFn: waitForEmuLoad,
+//                      });
+//                  } else {
+//                      waitForEmuLoad();
+//                  }
+                  waitForEmuLoad();
 
                 };
                 
@@ -685,6 +679,17 @@
             
         </script>
         <script src="./app.js"></script>
+
+        <script>
+          const romPath = "HelmetMan.gba"
+          fetch(romPath)
+            .then((response) => response.blob())
+            .then((blob) => {
+              console.log(blob);
+              window.loadRomFromFile(new File([blob], romPath));
+            });
+
+        </script>
     </head>
     <body>
 
@@ -846,7 +851,7 @@
                         <label class="btn" for="load-rom-from-file">From File</label>
                         <div class="gap"></div>
                         <form>
-                            <input id="load-rom-from-file" type="file" onchange="window.loadRomFromFile(event);"/>
+                            <input id="load-rom-from-file" type="file" onchange="window.loadRomFromFile(event.currentTarget.files[0]);"/>
                         </form>
                     </section>
                     <!--
